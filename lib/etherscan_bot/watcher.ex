@@ -28,7 +28,7 @@ defmodule EtherscanBot.Watcher do
   # }
 
   def check do
-    GenServer.call(:watcher, :check, 60_000)
+    GenServer.cast(:watcher, :check)
   end
 
   def start_link do
@@ -39,7 +39,7 @@ defmodule EtherscanBot.Watcher do
     {:ok, []}
   end
 
-  def handle_call(:check, _from, state) do
+  def handle_cast(:check, state) do
     Logger.info("Check phase initiated!")
 
     req_txs = HTTPotion.get(@etherscan_host, query: @etherscan_params)
@@ -60,7 +60,7 @@ defmodule EtherscanBot.Watcher do
       end
     end)
 
-    Logger.info("Check phase finished!")
+    Logger.info("Check phase finished")
 
     {:reply, :ok, state}
   end

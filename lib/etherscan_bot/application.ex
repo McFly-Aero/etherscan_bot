@@ -10,7 +10,7 @@ defmodule EtherscanBot.Application do
 
     # List all child processes to be supervised
     children = [
-      worker(EtherscanBot.Watcher, [], restart: :permanent)
+      worker(EtherscanBot.Watcher, [])
       # Starts a worker by calling: EtherscanBot.Worker.start_link(arg)
       # {EtherscanBot.Worker, arg},
     ]
