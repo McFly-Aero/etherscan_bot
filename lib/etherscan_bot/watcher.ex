@@ -62,6 +62,6 @@ defmodule EtherscanBot.Watcher do
 
     Logger.info("Check phase finished")
 
-    {:reply, :ok, state}
+    {:noreply, state}
   end
 end
