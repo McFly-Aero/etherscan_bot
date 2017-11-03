@@ -2,17 +2,16 @@ defmodule EtherscanBot.Watcher do
   use GenServer
   require Logger
 
-  @etherscan_host "https://api.etherscan.io/api"
+  @etherscan_host "http://api.etherscan.io/api"
   @etherscan_key "E6BKZNG99NUPGNDCY5H23IRYNRW44WYJZN"
-  @wallet_address "0x335B02e981d2b02696bb3db1214579ED34C6Afec"
-  # @wallet_address "0x046768ecbbe8c421190cb160ebfecdc4adbad2e7"
+  @wallet_address "0x335b02e981d2b02696bb3db1214579ed34c6afec"
   @etherscan_params %{
     module: "account",
     action: "txlist",
     sort: "asc",
     address: @wallet_address,
     startblock: 4_000_000,
-    endblock: 4_500_000,
+    endblock: 10_000_000,
     apikey: @etherscan_key
   }
 
@@ -59,7 +58,17 @@ defmodule EtherscanBot.Watcher do
   def handle_cast(:check, state) do
     Logger.info("Check phase initiated!")
 
-    senders = for tx <- get_transactions(), do: {tx["from"], tx["value"]}, into: %{}
+    senders =
+      get_transactions()
+      |> Enum.reduce(%{}, fn (%{"from" => from, "to" => to, "value" => real_amount}, acc) ->
+        from = String.downcase(from)
+        to = String.downcase(to)
+        address = @wallet_address
+        case to do
+          ^address -> put_in(acc[from], real_amount)
+          _ -> acc
+        end
+      end)
 
     req_members = HTTPotion.get(@mailchimp_host, basic_auth: @mailchimp_auth, query: @mailchimp_params)
     {:ok, res_members} = req_members |> Map.get(:body) |> Poison.decode
@@ -68,6 +77,7 @@ defmodule EtherscanBot.Watcher do
     Enum.each(members, fn %{"id" => id, "merge_fields" => fields} ->
       user_api_addr = "#{@mailchimp_host}/#{id}"
       %{"MMERGE4" => eth_address, "MMERGE6" => pre_paid} = fields
+      eth_address = String.downcase(eth_address)
 
       if eth_address in Map.keys(senders) && pre_paid != "YES" do
         body = Poison.encode!(%{merge_fields: %{"MMERGE6" => "YES", "R_AMOUNT" => senders[eth_address]}})
